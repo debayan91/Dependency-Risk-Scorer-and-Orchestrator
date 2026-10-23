@@ -1,0 +1,41 @@
+\section{System Architecture and Implementation}
+\label{sec:impl}
+
+SCDS is implemented in Python 3.10+ as an integrated suite of modular packages designed for high execution speed, portability, and zero-configuration deployment across heterogeneous environments.
+
+\subsection{Multi-Ecosystem Manifest Ingestion}
+The parsing subsystem (\texttt{scds/parsers/}) transforms diverse ecosystem manifest formats into a unified \texttt{Dependency} abstraction:
+\begin{enumerate}
+    \item \textbf{npm Ingestion (\texttt{npm.py}):} Parses \texttt{package.json} files using native JSON parsing. It ingests production dependencies, \texttt{devDependencies}, and \texttt{peerDependencies}. It strips semver range prefixes (\texttt{\^{}}, \texttt{\~{}}, \texttt{>=}, \texttt{<=}, \texttt{v}) to resolve the declared base version for advisory queries.
+    \item \textbf{PyPI Ingestion (\texttt{pypi.py}):} Parses \texttt{requirements.txt} files via regular-expression tokenization. It strips inline comments and pip configuration flags (e.g., \texttt{-r}, \texttt{--extra-index-url}, \texttt{-i}). It extracts package names and version bounds (\texttt{==}, \texttt{>=}, \texttt{<=}, \texttt{\~{}=}), cleanly flagging unpinned dependencies when no bound is specified.
+    \item \textbf{Maven Ingestion (\texttt{maven.py}):} Ingests \texttt{pom.xml} files using \texttt{xml.etree.ElementTree}. It handles XML default namespaces, extracting \texttt{groupId}, \texttt{artifactId}, and \texttt{version} elements into standardized coordinates (e.g., \texttt{org.apache.logging.log4j:log4j-core}).
+\end{enumerate}
+
+\subsection{Rate-Limit Resistant Caching Layer}
+\label{sec:impl_cache}
+A critical vulnerability of scanners relying on external REST APIs (such as OSV.dev or registry endpoints) is vulnerability to HTTP 429 rate-limiting during parallel CI builds. SCDS incorporates an embedded, disk-backed caching layer (\texttt{scds/cache.py}) based on SQLite:
+\begin{itemize}
+    \item \textbf{High-Concurrency WAL Mode:} Upon initialization, the cache executes \texttt{PRAGMA journal\_mode=WAL;}. Write-Ahead Logging allows concurrent readers to access cached vulnerability and maintainer records without blocking or being blocked by write transactions from background cache updates.
+    \item \textbf{Namespace Partitioning:} Cache keys are scoped by namespace: \texttt{osv} for vulnerability query responses and \texttt{maintainer} for registry metadata payloads, preventing key collisions.
+    \item \textbf{TTL Expiry and Lazy Pruning:} Cache entries are stored with an absolute epoch expiration timestamp ($t_{\text{now}} + \text{TTL}$, where default $\text{TTL} = 86{,}400$\,seconds / 24 hours). Expired records are lazily deleted upon read operations, avoiding background garbage collection threads.
+\end{itemize}
+
+\subsection{Developer CLI and CI/CD Build-Breaker}
+The CLI (\texttt{scds/cli.py}) is constructed using \texttt{click} and \texttt{rich}. It provides four primary command boundaries:
+\begin{enumerate}
+    \item \texttt{scds scan <manifest>}: Scans an entire manifest file, outputting a color-coded terminal table with per-dependency risk scores, threat vector breakdowns, and actionable remediation guidance. Supporting \texttt{--fail-on <LEVEL>} and \texttt{--fail-threshold <FLOAT>}, it enforces policy gates via process exit codes ($0$ for pass, $1$ for policy failure, $2$ for syntax/parsing error).
+    \item \texttt{scds check <package>}: Audits a single dependency prior to local installation (e.g., \texttt{scds check reqeusts}).
+    \item \texttt{scds dashboard}: Launches the local FastAPI web server.
+    \item \texttt{scds cache clear}: Clears local advisory and maintainer caches.
+\end{enumerate}
+
+\subsection{Interactive Web Dashboard}
+For security managers and compliance teams, SCDS provides a lightweight web dashboard (\texttt{scds/web/app.py}) served via FastAPI and Uvicorn. The frontend interface utilizes responsive dark-mode styling, presenting interactive risk badges, vector breakdown charts, and an accordion dependency inspector displaying full CVE identifiers, CVSS metrics, string distances, and remediation steps.
+
+\subsection{Repository-Level Orchestration Layer}
+The \texttt{orchestrator/} module extends SCDS with repository-wide automation capabilities without modifying the core risk engine:
+\begin{itemize}
+    \item \textbf{Manifest Discovery (\texttt{discovery.py}):} Recursively traverses workspace trees to locate all supported manifests while strictly pruning non-source directories, including \texttt{.git}, \texttt{node\_modules}, virtual environments (\texttt{venv}, \texttt{.venv}), and build targets (\texttt{target/}, \texttt{dist/}, \texttt{build/}).
+    \item \textbf{Differential Changed-File Scanning:} Supports selective auditing via \texttt{--changed <path>}, enabling CI pipelines to scan only files modified in the active pull request.
+    \item \textbf{Policy Evaluation (\texttt{policy.py}):} Aggregates multi-manifest scan outputs into repository-wide \texttt{PASS}, \texttt{WARN}, and \texttt{BLOCK} decisions.
+\end{itemize}

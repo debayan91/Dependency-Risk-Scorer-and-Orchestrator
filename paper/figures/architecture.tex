@@ -1,0 +1,78 @@
+% Architecture Diagram for SCDS
+\begin{tikzpicture}[
+    node distance=1.1cm and 0.6cm,
+    box/.style={rectangle, draw=black!75, fill=gray!8, thick, rounded corners=2pt, minimum height=0.7cm, align=center, font=\small},
+    secbox/.style={rectangle, draw=black!85, fill=blue!8, thick, rounded corners=2pt, minimum height=0.75cm, align=center, font=\small},
+    arrow/.style={-{Stealth[scale=1.0]}, thick, draw=black!80},
+    groupbox/.style={draw=black!40, dashed, rounded corners=4pt, inner sep=6pt}
+]
+
+% Manifest Ingestion
+\node[box, fill=orange!10] (manifest) {\textbf{Dependency Manifest}\\(\texttt{package.json} / \texttt{requirements.txt} / \texttt{pom.xml})};
+\node[box, below=0.6cm of manifest] (parser) {\textbf{Multi-Ecosystem Parsing Layer}\\(Semver stripping, version bounds, comment filters)};
+
+\draw[arrow] (manifest) -- (parser);
+
+% Analyzers in parallel
+\node[secbox, below left=1.1cm and -0.4cm of parser, text width=2.8cm] (typo) {
+    \textbf{Typosquatting Analyzer}\\
+    {\scriptsize Levenshtein / Jaro-Winkler}\\
+    {\scriptsize Normalization Confusion}\\
+    \textbf{Weight: 35\%}
+};
+
+\node[secbox, below=1.1cm of parser, text width=2.8cm] (vuln) {
+    \textbf{Vulnerability Analyzer}\\
+    {\scriptsize Google OSV.dev REST API}\\
+    {\scriptsize Compound CVSS Scoring}\\
+    \textbf{Weight: 45\%}
+};
+
+\node[secbox, below right=1.1cm and -0.4cm of parser, text width=2.8cm] (maint) {
+    \textbf{Maintainer Analyzer}\\
+    {\scriptsize Registry Age \& Dormancy}\\
+    {\scriptsize Version Pinning Heuristics}\\
+    \textbf{Weight: 20\%}
+};
+
+\draw[arrow] (parser) -| (typo.north);
+\draw[arrow] (parser) -- (vuln.north);
+\draw[arrow] (parser) -| (maint.north);
+
+% Cache sidecar
+\node[box, fill=yellow!15, right=0.5cm of vuln, text width=2.1cm, align=center] (cache) {
+    \textbf{SQLite Cache}\\
+    {\scriptsize WAL Mode}\\
+    {\scriptsize 24h Lazy TTL}
+};
+\draw[<->, dashed, thick] (vuln) -- (cache);
+\draw[<->, dashed, thick] (maint.east) -- ++(0.2,0) |- (cache.south);
+
+% Engine and Override
+\node[box, fill=purple!10, below=1.0cm of vuln, text width=7.2cm] (engine) {
+    \textbf{Deterministic Risk Engine \& Critical Threat Override}\\
+    $S_{raw} = 0.45 S_{vuln} + 0.35 S_{typo} + 0.20 S_{maint}$\\
+    {\scriptsize Non-linear override prevents dilution if $\max(S_{vuln}, S_{typo}) \ge 7.5$}
+};
+
+\draw[arrow] (typo.south) |- (engine.west);
+\draw[arrow] (vuln.south) -- (engine.north);
+\draw[arrow] (maint.south) |- (engine.east);
+
+% Outputs
+\node[box, fill=green!12, below left=0.8cm and 0.2cm of engine, text width=3.8cm] (cli) {
+    \textbf{Developer CLI \& CI/CD Gate}\\
+    {\scriptsize Rich terminal tables, exit codes (0/1/2)}\\
+    {\scriptsize Automated build-breaker}
+};
+
+\node[box, fill=cyan!10, below right=0.8cm and 0.2cm of engine, text width=3.8cm] (dash) {
+    \textbf{Orchestrator \& Dashboard}\\
+    {\scriptsize Recursive workspace discovery}\\
+    {\scriptsize FastAPI interactive risk visualizer}
+};
+
+\draw[arrow] (engine.south) -| (cli.north);
+\draw[arrow] (engine.south) -| (dash.north);
+
+\end{tikzpicture}

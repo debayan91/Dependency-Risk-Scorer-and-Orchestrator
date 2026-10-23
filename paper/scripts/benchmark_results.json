@@ -1,0 +1,50 @@
+{
+  "package.json": {
+    "ecosystem": "npm",
+    "dependency_count": 7,
+    "avg_latency_ms": 207.44,
+    "min_latency_ms": 70.45,
+    "max_latency_ms": 718.21,
+    "max_risk_score": 9.5,
+    "avg_risk_score": 5.5,
+    "risk_summary": {
+      "SAFE": 3,
+      "LOW": 0,
+      "MEDIUM": 0,
+      "HIGH": 1,
+      "CRITICAL": 3
+    }
+  },
+  "requirements.txt": {
+    "ecosystem": "PyPI",
+    "dependency_count": 7,
+    "avg_latency_ms": 314.82,
+    "min_latency_ms": 101.18,
+    "max_latency_ms": 1017.96,
+    "max_risk_score": 9.0,
+    "avg_risk_score": 5.5,
+    "risk_summary": {
+      "SAFE": 3,
+      "LOW": 0,
+      "MEDIUM": 1,
+      "HIGH": 2,
+      "CRITICAL": 1
+    }
+  },
+  "pom.xml": {
+    "ecosystem": "Maven",
+    "dependency_count": 3,
+    "avg_latency_ms": 1.68,
+    "min_latency_ms": 1.4,
+    "max_latency_ms": 2.33,
+    "max_risk_score": 9.5,
+    "avg_risk_score": 5.5,
+    "risk_summary": {
+      "SAFE": 1,
+      "LOW": 0,
+      "MEDIUM": 1,
+      "HIGH": 0,
+      "CRITICAL": 1
+    }
+  }
+}

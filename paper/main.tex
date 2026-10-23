@@ -1,0 +1,63 @@
+\documentclass[10pt,conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+% Essential Mathematics and Typesetting Packages
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{booktabs}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{cite}
+
+% Graphics and Visualization
+\usepackage{graphicx}
+\usepackage{tikz}
+\usepackage{pgfplots}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+\pgfplotsset{compat=1.18}
+
+% Formatting and Hyperlinks
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!80!black,
+    citecolor=blue!80!black,
+    urlcolor=blue!80!black
+}
+
+\begin{document}
+
+\title{SCDS: A Deterministic, Multi-Vector Supply Chain Dependency Risk Scorer for Low-Latency DevSecOps Pipelines}
+
+\author{
+    \IEEEauthorblockN{Debayan Dutta}
+    \IEEEauthorblockA{\textit{School of Computer Science and Engineering} \\
+    \textit{Vellore Institute of Technology}\\
+    Registration No: 23BCE0815 \\
+    Email: debayan.dutta2023@vitstudent.ac.in}
+}
+
+\maketitle
+
+\input{sections/abstract.tex}
+
+\begin{IEEEkeywords}
+Software supply chain security, dependency risk scoring, typosquatting detection, vulnerability assessment, CI/CD policy gates, rate-limit resilience, DevSecOps.
+\end{IEEEkeywords}
+
+\input{sections/introduction.tex}
+\input{sections/related_work.tex}
+\input{sections/method.tex}
+\input{sections/implementation.tex}
+\input{sections/evaluation.tex}
+\input{sections/discussion.tex}
+\input{sections/limitations.tex}
+\input{sections/conclusion.tex}
+
+\section*{Acknowledgment}
+The author thanks the open-source security community, the Google Open Source Vulnerabilities (OSV.dev) team, and the maintainers of the npm, PyPI, and Maven package ecosystems for providing the transparent threat intelligence feeds that made this research possible.
+
+\bibliographystyle{IEEEtran}
+\bibliography{references}
+
+\end{document}

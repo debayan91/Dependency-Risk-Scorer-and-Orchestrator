@@ -1,0 +1,51 @@
+% Evolution Timeline of Software Supply Chain Security Research
+\begin{tikzpicture}[
+    node distance=0.5cm and 0.4cm,
+    phase/.style={rectangle, draw=black!70, fill=gray!6, thick, rounded corners=3pt, minimum width=3.2cm, minimum height=1.6cm, align=left, font=\footnotesize},
+    highlight/.style={rectangle, draw=blue!80, fill=blue!8, very thick, rounded corners=3pt, minimum width=3.2cm, minimum height=1.6cm, align=left, font=\footnotesize},
+    trans/.style={-{Stealth[scale=1.0]}, thick, draw=black!70}
+]
+
+\node[phase] (p1) {
+    \textbf{Phase 1 (2022--2023)}\\
+    \textbf{Static ML Era}\\
+    \textit{Amalfi (ICSE '22)}\\
+    $\bullet$ Decision Trees, SVMs\\
+    $\bullet$ Seconds per package\\
+    $\blacktriangledown$ Defeated by obfuscation
+};
+
+\node[phase, right=of p1] (p2) {
+    \textbf{Phase 2 (2023--2024)}\\
+    \textbf{Dynamic Sandboxing}\\
+    \textit{DONAPI '24, OSCAR}\\
+    $\bullet$ API sequence tracing\\
+    $\bullet$ Defeats obfuscation\\
+    $\blacktriangledown$ Minutes latency; no CI
+};
+
+\node[phase, right=of p2] (p3) {
+    \textbf{Phase 3 (2025--2026)}\\
+    \textbf{LLMs \& RAG Reasoning}\\
+    \textit{IntelGuard, Cerebro}\\
+    $\bullet$ Deep semantic context\\
+    $\bullet$ FPs driven to $0.5\%$\\
+    $\blacktriangledown$ Costly, opaque, high latency
+};
+
+\node[highlight, below=0.8cm of p2] (scds) {
+    \textbf{Our Work (SCDS)}\\
+    \textbf{Deterministic Multi-Vector}\\
+    $\bullet$ Native Levenshtein/Jaro-Winkler + OSV + Maintainer\\
+    $\bullet$ Write-Ahead Logging SQLite cache ($\le 105$\,ms warm latency)\\
+    $\bullet$ Critical Threat Override (eliminates benign dilution)\\
+    $\bullet$ Zero cloud lock-in; exit codes (0/1/2) for CI/CD gates
+};
+
+\draw[trans] (p1) -- (p2);
+\draw[trans] (p2) -- (p3);
+\draw[trans] (p2.south) -- (scds.north);
+\draw[trans] (p1.south) |- (scds.west);
+\draw[trans] (p3.south) |- (scds.east);
+
+\end{tikzpicture}

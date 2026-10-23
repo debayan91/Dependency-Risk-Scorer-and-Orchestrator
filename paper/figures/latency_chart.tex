@@ -1,0 +1,35 @@
+% Latency comparison chart across ecosystems using PGFPlots / TikZ
+\begin{tikzpicture}
+\begin{axis}[
+    ybar,
+    bar width=14pt,
+    width=0.48\textwidth,
+    height=5.2cm,
+    enlarge x limits=0.25,
+    legend style={at={(0.5,-0.22)}, anchor=north, legend columns=-1, font=\footnotesize},
+    ylabel={Latency (ms)},
+    symbolic x coords={Maven (pom.xml), npm (package.json), PyPI (requirements.txt)},
+    xtick=data,
+    nodes near coords,
+    nodes near coords style={font=\tiny},
+    ymin=0, ymax=380,
+    grid=major,
+    grid style={dashed, gray!30},
+    x tick label style={font=\footnotesize, rotate=10, anchor=east}
+]
+
+\addplot[fill=blue!40, draw=blue!70] coordinates {
+    (Maven (pom.xml), 1.68)
+    (npm (package.json), 207.44)
+    (PyPI (requirements.txt), 314.82)
+};
+
+\addplot[fill=green!40, draw=green!70] coordinates {
+    (Maven (pom.xml), 1.40)
+    (npm (package.json), 70.45)
+    (PyPI (requirements.txt), 101.18)
+};
+
+\legend{Average Latency, Minimum (Warm Cache)}
+\end{axis}
+\end{tikzpicture}

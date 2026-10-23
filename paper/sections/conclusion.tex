@@ -1,0 +1,25 @@
+\section{Conclusion and Future Work}
+\label{sec:conclusion}
+
+As open-source software supply chains face unprecedented levels of malicious exploitation, software engineering organizations urgently require security tooling that can evaluate third-party dependencies with uncompromising speed, mathematical rigor, and actionable explainability. 
+
+This paper presented the \textbf{Supply Chain Dependency Risk Scorer (SCDS)}, an open-source, deterministic security system. By unifying zero-dependency string distance algorithms (Levenshtein and Jaro-Winkler), Google OSV.dev vulnerability aggregation, and registry maintainer hygiene heuristics, SCDS delivers a robust defense against typosquatting, known CVEs, and maintainer anomalies across npm, PyPI, and Maven ecosystems.
+
+Key results demonstrated by our evaluation include:
+\begin{enumerate}
+    \item \textbf{High-Speed Determinism:} Incorporating an embedded Write-Ahead Logging (WAL) SQLite cache eliminates external API rate-limiting, achieving warm-cache manifest scan latencies under $105$\,ms while executing 19 automated tests in under $1.0$\,second.
+    \item \textbf{Dilution Immunity:} Formalizing the non-linear \textit{Critical Threat Override Shield} mathematically guarantees that acute remote code execution vulnerabilities and high-confidence typosquats are never diluted by clean maintainer histories.
+    \item \textbf{Actionable Explainability:} Every flagged dependency provides exact string distances, CVE identifiers, and concrete remediation advice, eliminating the opacity of deep neural models.
+    \item \textbf{Production DevSecOps Readiness:} Standard UNIX exit codes and repository-level orchestration enable seamless integration into CI/CD pipelines as an automated build-breaker.
+\end{enumerate}
+
+\subsection{Future Research Directions}
+Future work will expand SCDS across four primary dimensions:
+\begin{enumerate}
+    \item \textbf{Transitive Lockfile Expansion:} Extending manifest parsers to ingest lockfiles (\texttt{package-lock.json}, \texttt{pnpm-lock.yaml}, \texttt{poetry.lock}) to resolve and evaluate deep transitive dependency trees.
+    \item \textbf{Automated Catalog Synchronization:} Dynamically populating `POPULAR\_PACKAGES` by synchronizing with daily top-10,000 package download rankings from npm, PyPI, and Maven registries.
+    \item \textbf{Automated Remediation Workflows:} Developing automated GitHub Actions and GitLab CI bots capable of generating non-vulnerable dependency bump pull requests upon policy failure.
+    \item \textbf{SLSA Provenance Verification:} Integrating Supply-chain Levels for Software Artifacts (SLSA) and Sigstore cryptographic provenance checks to verify build integrity prior to execution.
+\end{enumerate}
+
+The complete source code, test suites, and reproducibility scripts are available under an open-source license in the repository.

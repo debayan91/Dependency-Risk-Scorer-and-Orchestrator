@@ -1,0 +1,138 @@
+\section{Deterministic Multi-Vector Methodology}
+\label{sec:method}
+
+This section formalizes the mathematical and algorithmic foundation of SCDS. The system evaluates each candidate dependency $d = (p, v, e)$---comprising package name $p$, declared version $v$, and ecosystem $e \in \{\text{npm}, \text{PyPI}, \text{Maven}\}$---across three orthogonal threat vectors, culminating in a deterministic risk score $S_{\text{final}} \in [0.0, 10.0]$.
+
+\begin{figure*}[t]
+\centering
+\resizebox{0.95\textwidth}{!}{\input{figures/architecture.tex}}
+\caption{Architectural overview of the SCDS pipeline, illustrating the parallel execution of the three analyzer vectors, rate-limit-resistant caching, and the Critical Threat Override Shield.}
+\label{fig:arch}
+\end{figure*}
+
+\subsection{Vector A: Typosquatting and Brand-Jacking Analysis}
+\label{sec:method_typo}
+Attackers exploit typographical errors and visual ambiguity to entice developers into installing malicious packages \cite{davis2025typosmart}. The typosquatting analyzer compares candidate name $p$ against a curated ground-truth catalog $\mathcal{C}_e$ of high-reputation packages within ecosystem $e$.
+
+\subsubsection{Normalization Confusion}
+In package registries, punctuation variation is a primary confusion mechanism. SCDS first normalizes separators by mapping all hyphens to underscores:
+\begin{equation}
+\mathcal{N}(s) = \text{replace}(s, \text{'-'}, \text{'\_'})
+\end{equation}
+If $\mathcal{N}(p) = \mathcal{N}(q)$ for some $q \in \mathcal{C}_e$ while $p \neq q$ (e.g., \texttt{react\_dom} targeting \texttt{react-dom}), the candidate is immediately classified as a high-confidence dependency confusion attack, assigning $S_{\text{typo}} = 9.5$.
+
+\subsubsection{String Distance Formulation}
+When no direct separator variant exists, SCDS computes two complementary distance metrics:
+\begin{enumerate}
+    \item \textbf{Levenshtein Edit Distance \cite{levenshtein1966binary}:} Let $\text{Lev}(s_1, s_2)$ denote the minimum number of single-character insertions, deletions, or substitutions required to transform $s_1$ into $s_2$. SCDS implements this dynamically using two alternating row buffers, ensuring an $O(\min(|s_1|, |s_2|))$ spatial memory footprint.
+    \item \textbf{Jaro-Winkler Similarity \cite{winkler1990string}:} Jaro similarity $d_j \in [0.0, 1.0]$ is defined over character matches $m$ within match window $\Delta = \lfloor \max(|s_1|, |s_2|) / 2 \rfloor - 1$ and half-transpositions $t$:
+    \begin{equation}
+    d_j = \frac{1}{3}\left(\frac{m}{|s_1|} + \frac{m}{|s_2|} + \frac{m - t}{m}\right)
+    \end{equation}
+    The Jaro-Winkler metric applies a scaling bonus for common prefix length $L \le 4$ with prefix factor $p = 0.1$:
+    \begin{equation}
+    d_{jw} = \begin{cases} d_j & \text{if } d_j < 0.70 \\ d_j + (L \cdot p \cdot (1 - d_j)) & \text{if } d_j \ge 0.70 \end{cases}
+    \end{equation}
+\end{enumerate}
+
+\subsubsection{Typosquatting Risk Assignment}
+Let $q^* = \arg\max_{q \in \mathcal{C}_e} d_{jw}(p, q)$ be the closest legitimate neighbor, with minimum edit distance $\text{Lev}^* = \text{Lev}(p, q^*)$ and peak similarity $d_{jw}^* = d_{jw}(p, q^*)$. SCDS determines $S_{\text{typo}}$ deterministically:
+\begin{equation}
+S_{\text{typo}} = \begin{cases}
+0.0 & \text{if } p \in \mathcal{C}_e \\
+9.5 & \text{if } \text{Lev}^* = 1 \land d_{jw}^* \ge 0.88 \\
+7.5 & \text{if } \text{Lev}^* = 2 \land d_{jw}^* \ge 0.85 \\
+6.0 & \text{if } d_{jw}^* \ge 0.90 \\
+0.0 & \text{otherwise}
+\end{cases}
+\end{equation}
+
+\subsection{Vector B: Vulnerability Mapping and Compound CVSS}
+\label{sec:method_vuln}
+Candidate package $(p, v)$ is queried against the Google OSV.dev database \cite{osv2024database}. OSV aggregates CVEs and GHSAs across all supported ecosystems.
+
+\subsubsection{CVSS Parsing}
+For each advisory $k \in \mathcal{A}_{(p, v)}$, the analyzer extracts numeric Common Vulnerability Scoring System (CVSS) scores from the JSON payload:
+\begin{itemize}
+    \item Direct numeric CVSS 3.x vector ratings: $\text{CVSS}_k \in [0.0, 10.0]$.
+    \item When only categorical severity strings are present, SCDS maps them monotonically: \texttt{CRITICAL} $\to 9.5$, \texttt{HIGH} $\to 8.0$, \texttt{MEDIUM} $\to 5.5$, and \texttt{LOW} $\to 3.0$.
+\end{itemize}
+
+\subsubsection{Compound Aggregation Formula}
+Reporting only the single peak CVSS score ignores the compound threat surface of multiple concurrent vulnerabilities, while linear summation rapidly saturates at $10.0$ for benign packages with minor bugs. SCDS applies an asymptotic compound formulation:
+\begin{equation}
+\begin{split}
+S_{\text{vuln}} = \min \Bigl( 10.0, \, & \max_{k \in \mathcal{A}} (\text{CVSS}_k) \\
+& + \min\left(1.0, 0.2 \times (|\mathcal{A}| - 1)\right) \Bigr)
+\end{split}
+\end{equation}
+where $|\mathcal{A}|$ is the number of distinct reported advisories. This bounds the compound increment to at most $+1.0$, preserving peak severity dominance while capturing multi-exploit surfaces.
+
+\subsection{Vector C: Maintainer Trust and Metadata Hygiene}
+\label{sec:method_maint}
+Account compromise and supply chain hygiene deterioration are captured via four empirical signals evaluated against package registry metadata (PyPI JSON and npm registry endpoints):
+\begin{equation}
+S_{\text{maint}} = \min\left(10.0, f_{\text{pin}} + f_{\text{age}} + f_{\text{dorm}} + f_{\text{repo}}\right)
+\end{equation}
+where the individual penalty components are defined as:
+\begin{itemize}
+    \item \textbf{Unpinned Version Penalty ($f_{\text{pin}}$):}
+    \begin{equation}
+    f_{\text{pin}} = \begin{cases} 2.0 & \text{if } v \text{ is unpinned or wildcard} \\ 0.0 & \text{otherwise} \end{cases}
+    \end{equation}
+    \item \textbf{Brand-New Package Vector ($f_{\text{age}}$):}
+    \begin{equation}
+    f_{\text{age}} = \begin{cases} 5.0 & \text{if age } < 14 \text{ days} \\ 2.5 & \text{if } 14 \le \text{age} < 45 \text{ days} \\ 0.0 & \text{otherwise} \end{cases}
+    \end{equation}
+    \item \textbf{Maintainer Abandonment ($f_{\text{dorm}}$):}
+    \begin{equation}
+    f_{\text{dorm}} = \begin{cases} 3.5 & \text{if last release } > 1100 \text{ days} \\ 1.5 & \text{if } 730 < \text{last release } \le 1100 \text{ days} \\ 0.0 & \text{otherwise} \end{cases}
+    \end{equation}
+    \item \textbf{Missing Repository ($f_{\text{repo}}$):} If no repository URL is reported, $f_{\text{repo}} = 2.0$.
+\end{itemize}
+
+\subsection{Raw Weighted Integration}
+The baseline multi-vector score aggregates the three components using empirically tuned weights that sum to unity:
+\begin{equation}
+S_{\text{raw}} = (0.45 \times S_{\text{vuln}}) + (0.35 \times S_{\text{typo}}) + (0.20 \times S_{\text{maint}})
+\end{equation}
+The vulnerability vector is assigned the largest weight ($45\%$) due to direct exploitability, followed by typosquatting ($35\%$) and maintainer hygiene ($20\%$).
+
+\subsection{The Critical Threat Override Shield}
+\label{sec:method_override}
+A fatal flaw of linear weighted scoring in cybersecurity is \textit{benign dilution}. Consider a package with a confirmed critical remote code execution flaw ($\text{CVSS} = 9.8 \implies S_{\text{vuln}} = 9.8$), zero typosquatting signatures ($S_{\text{typo}} = 0.0$), and pristine maintainer hygiene ($S_{\text{maint}} = 0.0$). Standard linear calculation yields:
+\begin{equation}
+S_{\text{raw}} = (0.45 \times 9.8) + (0.35 \times 0.0) + (0.20 \times 0.0) = 4.41
+\end{equation}
+Under standard severity tiers, a score of $4.41$ is categorized as ``Low Risk'' (or ``Moderate''), allowing an unpatched RCE exploit to pass CI/CD build gates completely undetected.
+
+To eliminate this vulnerability, SCDS formalizes the \textbf{Critical Threat Override Shield}:
+\begin{equation}
+M = \max(S_{\text{vuln}}, S_{\text{typo}})
+\end{equation}
+\begin{equation}
+S_{\text{final}} = \begin{cases}
+\max(S_{\text{raw}}, M \times 0.95) & \text{if } M \ge 9.0 \\
+\max(S_{\text{raw}}, M \times 0.90) & \text{if } 7.5 \le M < 9.0 \\
+S_{\text{raw}} & \text{otherwise}
+\end{cases}
+\end{equation}
+With the override shield active, the candidate with $S_{\text{vuln}} = 9.8$ evaluates to:
+\begin{equation}
+S_{\text{final}} = \max(4.41, 9.8 \times 0.95) = 9.31 \implies \textbf{CRITICAL}
+\end{equation}
+This mathematically guarantees that acute threat vectors are never diluted by benign metadata.
+
+\subsection{Risk Tiers and Policy Gate Decisions}
+Final scores are rounded to one decimal place and binned into five standard severity tiers:
+\begin{itemize}
+    \item \textbf{SAFE:} $[0.0, 2.9]$; \textbf{LOW:} $[3.0, 5.4]$; \textbf{MEDIUM:} $[5.5, 7.4]$; \textbf{HIGH:} $[7.5, 8.9]$; \textbf{CRITICAL:} $[9.0, 10.0]$
+\end{itemize}
+Downstream CI/CD gates evaluate user policies (e.g., \texttt{--fail-on HIGH}), returning standard UNIX process exit codes:
+\begin{equation}
+\text{ExitCode} = \begin{cases}
+0 & \text{if } \forall d \in \mathcal{D}, \, \text{Rank}(d) < \text{Rank}_{\text{policy}} \\
+1 & \text{if } \exists d \in \mathcal{D}, \, \text{Rank}(d) \ge \text{Rank}_{\text{policy}} \\
+2 & \text{if operational / syntax failure}
+\end{cases}
+\end{equation}

@@ -1,0 +1,31 @@
+\section{Discussion and Operational Insights}
+\label{sec:discussion}
+
+The empirical findings highlight several operational insights for software supply chain defense within production DevSecOps environments.
+
+\subsection{Deterministic Heuristics vs. Deep Neural Models}
+The trajectory of recent research has prioritized complex neural sequence models (Cerebro \cite{zhang2025cerebro}) and LLM-driven RAG pipelines (IntelGuard \cite{guo2026intelguard}). While deep models provide unprecedented semantic context for distinguishing dual-use APIs, their operational footprint creates significant friction for continuous integration:
+\begin{itemize}
+    \item \textbf{Financial and Energy Footprint:} Running transformer inference across hundreds of dependencies on every pull request generates substantial GPU compute costs or cloud API token bills. In contrast, SCDS executes natively in Python with zero external C-dependencies, consuming negligible CPU cycles.
+    \item \textbf{Deterministic Consistency:} In high-assurance environments, security gates must produce identical results across identical commits. Neural models exhibit stochastic variance across model checkpoints or prompt revisions. SCDS provides pure deterministic mathematics: identical inputs are guaranteed to yield identical numerical scores and exit codes.
+\end{itemize}
+
+\subsection{Explainability as a First-Class Security Primitive}
+When an automated CI/CD security gate breaks a build, developers require actionable, human-readable explanations to unblock deployment. Black-box neural models emit opaque confidence tensors (e.g., ``Package risk: $0.94$''), leaving engineers unable to diagnose the root cause.
+
+SCDS treats explainability as a first-class security primitive. For every analyzed component, the system emits:
+\begin{enumerate}
+    \item The exact vector score breakdown ($S_{\text{vuln}}$, $S_{\text{typo}}$, $S_{\text{maint}}$),
+    \item Mathematical distance proofs (e.g., ``Differs by 1 character edit from popular package \texttt{lodash} (similarity: 90.9\%)''),
+    \item Complete CVE identifiers, advisory summaries, and CVSS scores, and
+    \item Precise remediation recommendations (e.g., ``Replace \texttt{reqeusts} with verified package \texttt{requests}'', ``Pin exact version '==1.2.3' in your manifest'').
+\end{enumerate}
+
+\subsection{Mitigating Alert Fatigue in CI/CD Gating}
+A primary cause of developers disabling security scanners is \textit{alert fatigue} caused by overwhelming false alarms. Downstream vulnerability tools that naively flag all historical advisories without severity calibration undermine developer trust \cite{jiang2025sbom}.
+
+SCDS addresses alert fatigue through two design mechanisms:
+\begin{enumerate}
+    \item \textbf{Tiered Threshold Policies:} Teams can tune gating policies incrementally (e.g., beginning with \texttt{--fail-on CRITICAL} to block only active RCEs and confirmed typosquats, before tightening to \texttt{--fail-on HIGH}).
+    \item \textbf{Differential Scanning via Orchestrator:} By utilizing \texttt{--changed <path>}, developers are not bombarded with legacy alerts from untouched services; the pipeline only blocks when a pull request introduces a new vulnerable dependency.
+\end{enumerate}

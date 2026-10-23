@@ -1,0 +1,40 @@
+\section{Introduction}
+\label{sec:intro}
+
+Modern enterprise software construction has fundamentally shifted from monolithic in-house programming to the rapid composition of third-party open-source components \cite{ladisa2023sok}. Centralized package registries, including npm (JavaScript/TypeScript), PyPI (Python), and Maven Central (Java), serve billions of package downloads monthly, drastically reducing time-to-market. However, this implicit trust in decentralized package repositories introduces a sprawling, opaque, and highly volatile attack surface \cite{ladisa2023sok}. 
+
+Between 2023 and 2026, software supply chain attacks witnessed an unprecedented surge, with malicious packages proliferating across public ecosystems \cite{davis2025typosmart}. Adversaries weaponize modern development workflows via diverse exploitation vectors:
+\begin{enumerate}
+    \item \textbf{Typosquatting and Dependency Confusion:} Publishing package names with subtle lexical variations targeting popular libraries (e.g., \texttt{reqeusts} targeting \texttt{requests}, or \texttt{lodsh} targeting \texttt{lodash}) or exploiting namespace separator discrepancies (e.g., \texttt{react\_dom} versus \texttt{react-dom}) \cite{davis2025typosmart}.
+    \item \textbf{Latent Vulnerability Exploitation:} Leaving unpatched components containing critical Common Vulnerabilities and Exposures (CVEs) or GitHub Security Advisories (GHSAs) with Remote Code Execution (RCE) capabilities (such as Log4Shell \texttt{CVE-2021-44228}) in production manifests.
+    \item \textbf{Maintainer Hygiene Degradation and Account Takeovers:} Introducing unpinned floating dependencies (e.g., wildcards or unspecified versions), incorporating brand-new packages ($< 14$ days old) without proven provenance, or utilizing dormant packages whose original maintainers have abandoned security updates \cite{ladisa2023sok, hegewald2025openssf}.
+\end{enumerate}
+
+\subsection{The DevSecOps Operational Dilemma}
+While academic research has produced sophisticated defensive mechanisms, existing paradigms exhibit critical operational limitations when deployed into modern Continuous Integration and Continuous Deployment (CI/CD) pipelines:
+\begin{itemize}
+    \item \textbf{The Latency Bottleneck of Dynamic Sandboxes:} Frameworks such as DONAPI \cite{huang2024donapi} and OSCAR \cite{duan2024oscar} rely on running untrusted code in virtual machines or executing aggressive fuzzing loops to uncover dormant payloads. While effective at defeating static obfuscation, dynamic analysis requires minutes to hours per package, introducing unacceptable developer friction that completely stalls synchronous build gates.
+    \item \textbf{The Cost, Opacity, and Privacy Hazards of LLMs:} Cutting-edge frameworks such as IntelGuard \cite{guo2026intelguard} and Cerebro \cite{zhang2025cerebro} leverage Large Language Models (LLMs) and deep transformer architectures for semantic reasoning over code sequences. While driving false-positive rates down to $0.5\%$, they introduce high per-query financial costs, network latency (10--30 seconds), opaque non-deterministic outputs, and severe enterprise privacy hazards associated with transmitting internal proprietary dependency lists to cloud AI providers.
+    \item \textbf{Upstream API Rate-Limiting Fragility:} Academic prototypes querying external intelligence feeds (such as the Google OSV.dev REST API \cite{osv2024database} or GitHub APIs) regularly trigger HTTP 429 (``Too Many Requests'') errors during enterprise-scale parallel builds, causing unpredictable pipeline crashes \cite{jiang2025sbom}.
+    \item \textbf{The Vulnerability Dilution Failure Mode:} In standard weighted linear scoring models, a benign maintainer history or clean typosquatting check can mathematically dilute a critical remote code execution vulnerability (CVSS 9.8) down into an acceptable ``Medium'' or ``Low'' risk score, allowing lethal attacks to bypass automated security gates.
+\end{itemize}
+
+\subsection{Research Questions}
+To address these fundamental tensions, this paper investigates three research questions:
+\begin{itemize}
+    \item \textbf{RQ1 (Architectural Feasibility \& Explainability):} How can multi-vector supply chain threat signals---spanning lexical similarity, vulnerability advisories, and registry metadata---be aggregated into a deterministic, human-explainable risk score without relying on opaque deep neural networks or high-cost LLMs?
+    \item \textbf{RQ2 (Rate-Limiting \& Latency Mitigation):} To what extent does an embedded, WAL-enabled disk cache mitigate external API rate-limiting (HTTP 429) and maintain sub-second execution overhead during automated manifest scanning?
+    \item \textbf{RQ3 (Security Dilution Prevention):} How effectively does a non-linear override rule prevent benign maintainer metadata from suppressing high-severity remote code execution vulnerabilities or active typosquats?
+\end{itemize}
+
+\subsection{Summary of Contributions}
+This paper presents the design, implementation, and empirical evaluation of the \textbf{Supply Chain Dependency Risk Scorer (SCDS)}, an open-source, deterministic security system. Our contributions include:
+\begin{enumerate}
+    \item \textbf{Deterministic Multi-Vector Risk Engine:} We formalize and implement an explainable mathematical engine combining native, zero-dependency Levenshtein and Jaro-Winkler string distance metrics, Google OSV.dev REST vulnerability parsing, and registry hygiene heuristics across npm, PyPI, and Maven ecosystems.
+    \item \textbf{Critical Threat Override Shield:} We identify the security dilution vulnerability in linear multi-attribute scoring and formalize a non-linear threshold override mechanism that mathematically guarantees high-confidence attacks trigger appropriate build gates.
+    \item \textbf{Rate-Limit Resistant Caching Architecture:} We engineer an embedded SQLite key-value cache utilizing Write-Ahead Logging (WAL mode), enabling non-blocking concurrent reads and driving warm-cache manifest scan latencies below $105$\,ms.
+    \item \textbf{Reproducible Software Artifacts and Orchestration:} We release the complete, open-source codebase comprising a developer terminal CLI, automated CI/CD policy gates (exit codes 0/1/2), 19 passing unit and integration tests ($< 1.0$\,s execution), and a recursive repository orchestrator.
+\end{enumerate}
+
+\subsection{Paper Organization}
+The remainder of this paper is structured as follows: Section~\ref{sec:related} surveys related work and establishes our taxonomy. Section~\ref{sec:method} formalizes the mathematical methodology and the Critical Threat Override Shield. Section~\ref{sec:impl} describes the multi-ecosystem architecture, caching engine, and CI/CD orchestration. Section~\ref{sec:eval} presents empirical latency benchmarks, test suite validation, and sample manifest evaluations. Section~\ref{sec:discussion} discusses engineering tradeoffs and explainability. Section~\ref{sec:limitations} delineates threats to validity and current boundaries, and Section~\ref{sec:conclusion} concludes the paper.

@@ -1,0 +1,27 @@
+\section{Threats to Validity and Limitations}
+\label{sec:limitations}
+
+In accordance with rigorous academic standards, this section explicitly outlines threats to validity and the architectural boundaries of SCDS.
+
+\subsection{Threats to Validity}
+
+\subsubsection{Internal Validity}
+Internal validity concerns whether the measured outcomes are genuinely attributable to the proposed design:
+\begin{itemize}
+    \item \textbf{Cache Staleness Trade-off:} The 24-hour default TTL in the SQLite cache guarantees high execution speed and rate-limit immunity. However, if an advisory or maintainer account takeover is disclosed minutes after an entry is cached, SCDS will serve the cached record until TTL expiration unless manually purged via \texttt{scds cache clear}.
+    \item \textbf{Network Fallback Degradation:} In completely air-gapped environments without prior cache population, SCDS degrades gracefully to local static heuristics. While typosquatting and version pinning checks remain 100\% operational, vulnerability mapping is skipped, logging an explicit advisory warning.
+\end{itemize}
+
+\subsubsection{External Validity}
+External validity concerns the generalizability of the findings across broader software engineering contexts:
+\begin{itemize}
+    \item \textbf{Direct vs. Transitive Dependency Boundary:} SCDS currently inspects declared dependencies in root manifests (\texttt{package.json}, \texttt{requirements.txt}, \texttt{pom.xml}). In modern web applications, over $80\%$ of vulnerable code paths originate in secondary or tertiary transitive dependencies. Evaluating transitive packages requires lockfile parsing (\texttt{package-lock.json}, \texttt{poetry.lock}) or live virtual environment tree resolution.
+    \item \textbf{Ground-Truth Catalog Boundedness:} The typosquatting analyzer compares package names against a curated catalog of high-reputation packages ($\mathcal{C}_e$). While this catalog encompasses the most frequently targeted core libraries across PyPI (55 targets), npm (50 targets), and Maven (12 targets), attacks mimicking niche packages outside this set will not trigger the typosquatting detector.
+\end{itemize}
+
+\subsubsection{Construct Validity}
+Construct validity assesses whether the evaluation metrics adequately reflect supply chain security posture:
+\begin{itemize}
+    \item \textbf{Absence of Code Reachability Analysis:} Like standard software composition analysis (SCA) tools, SCDS inspects manifest declarations rather than compiling an Abstract Syntax Tree (AST) call-graph. It cannot prove whether an imported vulnerable function is actually invoked by host application code \cite{jiang2025sbom}.
+    \item \textbf{Zero-Day Semantic Malware:} If an attacker successfully compromises a legitimate maintainer account and injects novel, un-CVE'd malware without altering the package name, SCDS will only detect maintainer anomaly flags (e.g., unexpected release spikes) but cannot inspect arbitrary runtime binary payloads without dynamic sandboxing.
+\end{itemize}

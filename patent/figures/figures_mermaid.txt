@@ -1,0 +1,241 @@
+================================================================================
+PATENT INVENTION DISCLOSURE: TECHNICAL DRAWINGS IN MERMAID CODE
+Invention: Deterministic Multi-Vector Software Dependency Risk Assessment System
+           with Critical Threat Override and Resilient Local Caching
+================================================================================
+
+This file contains the complete Mermaid diagram definitions for all three technical
+figures (FIG. 1, FIG. 2, and FIG. 3) created for the patent disclosure. Each diagram
+faithfully reproduces the reference numerals, components, data flows, and decision
+logic established in the disclosure specification and TikZ source drawings.
+
+You can render these diagrams in any Mermaid-compatible viewer (such as GitHub,
+GitLab, VS Code Mermaid Preview, Notion, Obsidian, or https://mermaid.live).
+
+--------------------------------------------------------------------------------
+TABLE OF CONTENTS
+--------------------------------------------------------------------------------
+1. FIG. 1: Overall System Architecture and Operating Environment (100-126)
+2. FIG. 2: Decision Flowchart & Critical Threat Override Shield Workflow (200-228)
+3. FIG. 3: Embedded SQLite Caching Subsystem & WAL Concurrency Architecture (300-314)
+4. Reference Numeral Legend & Index
+
+================================================================================
+1. FIG. 1: SYSTEM ARCHITECTURE AND OPERATING ENVIRONMENT
+================================================================================
+
+```mermaid
+graph TB
+    %% ========================================================================
+    %% FIG. 1: Software Dependency Risk Assessment System Architecture (100)
+    %% ========================================================================
+
+    subgraph S100 ["100 Software Dependency Risk Assessment System"]
+        M102["102 Dependency Manifest File<br/>(package.json / requirements.txt / pom.xml)"]
+        P104["104 Multi-Ecosystem Ingestion & Normalization Engine"]
+        
+        M102 -->|Ingest Raw Manifest| P104
+
+        subgraph Analyzers ["Parallel Feature Analyzers"]
+            T106["106 Typosquatting Analyzer<br/>• Levenshtein Distance (2-Row Buffer)<br/>• Jaro-Winkler Similarity Metric<br/>• Separator Normalization Confusion"]
+            V108["108 Vulnerability Analyzer<br/>• Google OSV.dev REST Ingestion<br/>• Compound CVSS Aggregation Formula"]
+            M110["110 Maintainer Trust Analyzer<br/>• Package Registry Metadata Mining<br/>• Strict Version Pinning Verification<br/>• Release Age & Dormancy Signals"]
+        end
+
+        P104 -->|Normalized (p, v, e)| T106
+        P104 -->|Normalized (p, v, e)| V108
+        P104 -->|Normalized (p, v, e)| M110
+
+        C112[("112 Resilient SQLite Cache<br/>• WAL Journal Mode (Concurrent Reads)<br/>• Namespace Hashing (osv / maintainer)<br/>• Lazy 24-hr TTL Expiration")]
+        
+        V108 <-->|Read / Write Cached Advisories| C112
+        M110 <-->|Read / Write Cached Metadata| C112
+
+        E118["118 Deterministic Risk Engine<br/>Computes Baseline Weighted Risk Score:<br/>S_raw = 0.45*S_vuln + 0.35*S_typo + 0.20*S_maint"]
+        
+        T106 -->|Typosquat Vector S_typo| E118
+        V108 -->|Vulnerability Vector S_vuln| E118
+        M110 -->|Maintainer Penalty S_maint| E118
+
+        O120["120 Critical Threat Override Shield<br/>Non-Linear Safety Bound:<br/>• If max(S_v, S_t) >= 9.0 => S_final >= max(S_raw, M*0.95)<br/>• If 7.5 <= max(S_v, S_t) < 9.0 => S_final >= max(S_raw, M*0.90)<br/>Prevents Utility Dilution of Critical CVEs & Typosquats"]
+        
+        E118 -->|Raw Score S_raw| O120
+
+        G122["122 CI/CD Policy Gate<br/>Automated Build Blocking<br/>Emits Exit Code 0 (Pass) / 1 (Fail)"]
+        CLI124["124 Developer CLI Interface<br/>Terminal Badges & Explanations<br/>Actionable Package Remediations"]
+        D126["126 Web Dashboard Server<br/>Visual Accordion & Risk Breakdown<br/>Differential PR Scan & JSON Export"]
+
+        O120 -->|Evaluated Risk Tier| G122
+        O120 -->|Formatted Audit Report| CLI124
+        O120 -->|Structured Findings JSON| D126
+    end
+
+    subgraph External ["External Services (Queried on Cache Miss Only)"]
+        OSV114["114 Google OSV.dev REST API<br/>https://api.osv.dev/v1/query"]
+        REG116["116 Public Package Registries<br/>PyPI JSON API / npm Registry REST Endpoints"]
+    end
+
+    C112 -.->|Cache Miss Network Query| OSV114
+    C112 -.->|Cache Miss Network Query| REG116
+```
+
+================================================================================
+2. FIG. 2: DECISION FLOWCHART & CRITICAL THREAT OVERRIDE SHIELD
+================================================================================
+
+```mermaid
+flowchart TD
+    %% ========================================================================
+    %% FIG. 2: Decision Flowchart of Multi-Vector Risk Calculation & Override
+    %% ========================================================================
+
+    START(["200 Start Manifest Audit Run"])
+    INGEST["202 Ingest Dependency Manifest File & Normalize Coordinates (p, v, e)"]
+    
+    START --> INGEST
+
+    PARALLEL["204, 206, 208 Execute Multi-Vector Feature Extraction in Parallel:<br/>• 204: Compute Levenshtein & Jaro-Winkler Distances (S_typo)<br/>• 206: Query Cache/OSV & Calculate Compound CVSS Score (S_vuln)<br/>• 208: Inspect Registry Metadata & Version Pinning (S_maint)"]
+    
+    INGEST --> PARALLEL
+
+    RAW["210 Calculate Raw Baseline Weighted Risk Score:<br/>S_raw = 0.45 * S_vuln + 0.35 * S_typo + 0.20 * S_maint"]
+    
+    PARALLEL --> RAW
+
+    PEAK["212 Determine Peak Acute Threat Signal:<br/>M = max(S_vuln, S_typo)"]
+    
+    RAW --> PEAK
+
+    D1{"214 Is Peak Threat M >= 9.0?<br/>(Critical Remote Code Execution or Blatant Typosquat)"}
+    
+    PEAK --> D1
+
+    CRIT["216 Apply Critical Threat Override Shield:<br/>S_final = max(S_raw, M * 0.95)<br/>(Guarantees Escalation to CRITICAL Tier [9.0 - 10.0])"]
+    
+    D1 -- YES --> CRIT
+
+    D2{"218 Is 7.5 <= M < 9.0?<br/>(High-Severity CVE or Close Typo)"}
+    
+    D1 -- NO --> D2
+
+    HIGH["220 Apply High-Threat Override Shield:<br/>S_final = max(S_raw, M * 0.90)<br/>(Guarantees Escalation to HIGH Tier [7.5 - 8.9])"]
+    
+    D2 -- YES --> HIGH
+
+    BASELINE["222 Retain Baseline Weighted Score:<br/>S_final = S_raw<br/>(No Acute Threat; Standard Multi-Attribute Weighting)"]
+    
+    D2 -- NO --> BASELINE
+
+    TIER["224 Bin Final Score S_final into Standard Categorical Risk Tier:<br/>• SAFE (0.0 to 2.9)<br/>• LOW (3.0 to 5.4)<br/>• MEDIUM (5.5 to 7.4)<br/>• HIGH (7.5 to 8.9)<br/>• CRITICAL (9.0 to 10.0)"]
+
+    CRIT --> TIER
+    HIGH --> TIER
+    BASELINE --> TIER
+
+    GATE{"226 Evaluate Final Risk Tier Against CI/CD Policy Gate<br/>(e.g., --fail-on HIGH)"}
+
+    TIER --> GATE
+
+    EXIT0["Policy Check Passed:<br/>Emit UNIX Process Exit Code 0<br/>(Allow CI/CD Pipeline to Proceed)"]
+    EXIT1["Policy Check Breached:<br/>Emit UNIX Process Exit Code 1<br/>(Halt CI/CD Pipeline & Block Deployment)"]
+
+    GATE -- S_final < Policy Threshold --> EXIT0
+    GATE -- S_final >= Policy Threshold --> EXIT1
+
+    EMIT(["228 Emit Machine-Readable JSON Findings & Color-Coded Terminal Tables"])
+
+    EXIT0 --> EMIT
+    EXIT1 --> EMIT
+```
+
+================================================================================
+3. FIG. 3: CACHING SUBSYSTEM & WRITE-AHEAD LOGGING (WAL) CONCURRENCY
+================================================================================
+
+```mermaid
+graph TB
+    %% ========================================================================
+    %% FIG. 3: Embedded SQLite Caching Subsystem Architecture (300)
+    %% ========================================================================
+
+    subgraph Clients ["Concurrent Accessing Clients & Processes"]
+        CI1["302a CI/CD Build Job Runner 1"]
+        CI2["302b CI/CD Build Job Runner 2"]
+        CLI["302c Local Developer CLI Execution"]
+    end
+
+    subgraph CachingSubsystem ["300 Embedded Caching Subsystem (~/.cache/scds/scds_cache.db)"]
+        KEYMOD["304 Namespace-Scoped Key Construction Module<br/>Generates Partitioned Key String:<br/>Key = &lt;namespace&gt;:&lt;ecosystem&gt;:&lt;name&gt;:&lt;version&gt;<br/>(Namespaces: 'osv' for Vulnerabilities, 'maintainer' for Metadata)"]
+        
+        WAL["306 Write-Ahead Logging (WAL) Shared Memory Ring Buffer<br/>• PRAGMA journal_mode=WAL;<br/>• Permits Simultaneous Concurrent Reads & Non-Blocking Appends<br/>• Eliminates Database Locking Delays During Parallel Builds"]
+        
+        DB[("308 Primary SQLite Database Storage<br/>Database File: scds_cache.db<br/>Table: cache_store (key TEXT PRIMARY KEY, payload TEXT, expires_at REAL)")]
+        
+        LAZY["314 Lazy Expiration & Cache Eviction Module<br/>Evaluates Timestamp on Access:<br/>If t_now > t_expires_at, Stale Entry Evicted<br/>(Standard TTL = 86,400 seconds / 24 hours)"]
+    end
+
+    subgraph Upstream ["External Network Services"]
+        EXT312["312 External REST Endpoints<br/>• Google OSV.dev Advisory API<br/>• PyPI JSON REST API<br/>• npm Registry API<br/>(Contacted Exclusively Upon Local Cache Miss)"]
+    end
+
+    CI1 -->|Request Dependency Coordinates| KEYMOD
+    CI2 -->|Request Dependency Coordinates| KEYMOD
+    CLI -->|Request Dependency Coordinates| KEYMOD
+
+    KEYMOD <-->|310 Non-Blocking Concurrent Reads & Serialized Writes| WAL
+    WAL <-->|Asynchronous Checkpoint & Synchronous Disk Flush| DB
+    WAL -->|Inspect Expiration Timestamp During Reads| LAZY
+
+    KEYMOD -.->|Query External API on Cache Miss| EXT312
+    EXT312 -.->|Return JSON Advisory / Metadata Payload| KEYMOD
+```
+
+================================================================================
+4. REFERENCE NUMERAL LEGEND & INDEX
+================================================================================
+
+FIG. 1 REFERENCE NUMERALS (100 SERIES):
+  - 100: Software dependency risk assessment system (overall apparatus/environment)
+  - 102: Dependency manifest files (package.json, requirements.txt, pom.xml)
+  - 104: Multi-ecosystem ingestion and normalization engine
+  - 106: Edit-distance typosquatting analyzer
+  - 108: Advisory vulnerability analyzer
+  - 110: Package registry maintainer trust analyzer
+  - 112: Embedded SQLite key-value local cache
+  - 114: External Google OSV.dev REST vulnerability API
+  - 116: External package registry APIs (PyPI, npm)
+  - 118: Deterministic multi-vector risk engine
+  - 120: Critical Threat Override Shield
+  - 122: CI/CD automated policy gate (UNIX exit codes 0/1)
+  - 124: Developer CLI terminal interface
+  - 126: Web dashboard server and differential PR visualizer
+
+FIG. 2 REFERENCE NUMERALS (200 SERIES):
+  - 200: Start manifest audit run
+  - 202: Ingest manifest and normalize dependency coordinates (p, v, e)
+  - 204: Compute typosquatting edit distances and separator confusion (S_typo)
+  - 206: Query cache/OSV and calculate compound CVSS score (S_vuln)
+  - 208: Inspect maintainer metadata and version pinning status (S_maint)
+  - 210: Calculate raw baseline weighted risk score (S_raw)
+  - 212: Determine peak acute threat signal M = max(S_vuln, S_typo)
+  - 214: Decision block: Is M >= 9.0?
+  - 216: Operational step: Apply critical override S_final = max(S_raw, M * 0.95)
+  - 218: Decision block: Is 7.5 <= M < 9.0?
+  - 220: Operational step: Apply high-threat override S_final = max(S_raw, M * 0.90)
+  - 222: Operational step: Retain baseline weighted score S_final = S_raw
+  - 224: Bin final score into categorical risk tier (SAFE, LOW, MEDIUM, HIGH, CRITICAL)
+  - 226: Evaluate against CI/CD policy gate threshold and emit exit code 0 or 1
+  - 228: Emit machine-readable JSON findings and color-coded terminal tables
+
+FIG. 3 REFERENCE NUMERALS (300 SERIES):
+  - 300: Embedded SQLite caching subsystem architecture
+  - 302a: CI/CD build runner process 1
+  - 302b: CI/CD build runner process 2
+  - 302c: Local developer CLI execution process
+  - 304: Namespace-scoped key construction module
+  - 306: Write-Ahead Logging (WAL) shared memory ring buffer
+  - 308: Primary SQLite database file (scds_cache.db)
+  - 310: Concurrent non-blocking read and write transactions
+  - 312: External REST APIs (OSV.dev, PyPI, npm)
+  - 314: Lazy TTL expiration and cache eviction module
+================================================================================

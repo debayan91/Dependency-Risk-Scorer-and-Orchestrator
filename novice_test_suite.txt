@@ -1,0 +1,150 @@
+# ==============================================================================
+# Supply Chain Dependency Risk Scorer (SCDS) - Novice Test Suite
+# File: novice_test_suite.txt
+# Ecosystem: PyPI (Python Package Index)
+#
+# PURPOSE FOR NOVICES & STUDENTS:
+# This test suite is designed as a beginner-friendly benchmark for testing
+# software supply chain vulnerability detection. It provides clearly labeled,
+# realistic dependency examples covering all 5 supply chain risk tiers:
+#
+#   1. SAFE        (Score: 0.0 - 2.9)  -> Verified legitimate, cleanly pinned
+#   2. LOW RISK    (Score: 3.0 - 5.4)  -> Version hygiene & unpinned warnings
+#   3. MEDIUM RISK (Score: 5.5 - 7.4)  -> Transposition typosquatting attempts
+#   4. HIGH RISK   (Score: 7.5 - 8.9)  -> Known CVE vulnerabilities (CVSS 7.0+)
+#   5. CRITICAL    (Score: 9.0 - 10.0) -> High-confidence typosquats & RCE CVEs
+#
+# HOW TO RUN THIS TEST SUITE:
+# ------------------------------------------------------------------------------
+# 1. Standard scan (generates human-readable terminal table):
+#      python3 -m scds scan novice_test_suite.txt
+#
+# 2. CI/CD Pipeline Gate (fails build if HIGH or CRITICAL risks exist):
+#      python3 -m scds scan novice_test_suite.txt --fail-on HIGH
+#
+# 3. Export Machine-Readable JSON (for automated scripts or web hooks):
+#      python3 -m scds scan novice_test_suite.txt --json
+#
+# 4. View in Interactive Web Dashboard:
+#      Upload this file at http://localhost:8765
+# ==============================================================================
+
+
+# ==============================================================================
+# LEVEL 1: SAFE (Risk Score: 0.0 – 2.9)
+# ------------------------------------------------------------------------------
+# CHARACTERISTICS:
+# - Matches known, high-reputation open-source packages in PyPI ground-truth.
+# - Pinned to modern, non-vulnerable versions with exact '==' syntax.
+# - Zero active CVEs/GHSAs reported in the Google OSV database.
+# - Healthy maintainer hygiene and verified repository links.
+#
+# WHAT THE SCANNER EXPECTS:
+# - Risk Engine Output: SAFE (Score: 0.0)
+# - Typosquatting Analyzer: 0.0 (Exact match with official package)
+# - Vulnerability Analyzer: 0.0 (No advisories)
+# ==============================================================================
+
+# Case 1.1: FastAPI - Modern high-performance web framework (pinned & clean)
+fastapi==0.110.0
+
+# Case 1.2: Pydantic - Data validation and parsing library (pinned & clean)
+pydantic==2.6.4
+
+# Case 1.3: Click - Command line interface creation kit (pinned & clean)
+click==8.1.7
+
+
+# ==============================================================================
+# LEVEL 2: LOW RISK (Risk Score: 3.0 – 5.4)
+# ------------------------------------------------------------------------------
+# CHARACTERISTICS:
+# - Unpinned dependency versions (floating/wildcard specification).
+# - Why it matters: Omitting '==' allows automated package installers to pull
+#   untested newer releases or potentially poisoned releases during build time.
+# - Maintainer Hygiene Analyzer flags 'UNPINNED_VERSION'.
+#
+# WHAT THE SCANNER EXPECTS:
+# - Risk Engine Output: LOW (Score ~3.1)
+# - Maintainer Hygiene Analyzer: Adds +2.0 risk score for missing version pin.
+# - Actionable Guidance: "Pin exact dependency version (e.g., '==1.2.3')."
+# ==============================================================================
+
+# Case 2.1: Flask - Unpinned web framework (triggers UNPINNED_VERSION warning)
+flask
+
+# Case 2.2: Jinja2 - Unpinned templating engine (triggers UNPINNED_VERSION warning)
+jinja2
+
+
+# ==============================================================================
+# LEVEL 3: MEDIUM RISK (Risk Score: 5.5 – 7.4)
+# ------------------------------------------------------------------------------
+# CHARACTERISTICS:
+# - Transposition typosquatting: Package names with adjacent characters swapped.
+# - Target package is legitimate and popular, but the typed name is deceptive.
+# - Algorithms calculate high Jaro-Winkler similarity (> 0.85) with Levenshtein
+#   distance of 2 edits.
+#
+# WHAT THE SCANNER EXPECTS:
+# - Risk Engine Output: MEDIUM (Score ~6.8)
+# - Typosquatting Analyzer: Detects 'reqeusts' -> 'requests' and 'flsak' -> 'flask'
+# - Actionable Guidance: Replace with verified legitimate target package.
+# ==============================================================================
+
+# Case 3.1: 'reqeusts' - Transposition typosquat targeting 'requests' (e <-> q swapped)
+reqeusts==2.31.0
+
+# Case 3.2: 'flsak' - Transposition typosquat targeting 'flask' (a <-> s swapped)
+flsak==1.0.0
+
+
+# ==============================================================================
+# LEVEL 4: HIGH RISK (Risk Score: 7.5 – 8.9)
+# ------------------------------------------------------------------------------
+# CHARACTERISTICS:
+# - Legitimate popular packages pinned to severely outdated, vulnerable versions.
+# - Contains known public vulnerabilities (CVEs) with high CVSS scores (7.0 - 8.9).
+# - Attack vectors include session fixation, unintended credential leakage on HTTP
+#   redirects, and CRLF header injection.
+#
+# WHAT THE SCANNER EXPECTS:
+# - Risk Engine Output: HIGH (Score ~7.7)
+# - Vulnerability Analyzer: Matches advisories in Google OSV database.
+# - CI/CD Impact: Trips '--fail-on HIGH' policy gate and exits with code 1.
+# ==============================================================================
+
+# Case 4.1: Requests v2.20.0 - Contains CVE-2018-18074 (unintended credential leak on redirect)
+requests==2.20.0
+
+# Case 4.2: Cryptography v3.3.1 - Contains multiple memory and buffer advisories
+cryptography==3.3.1
+
+# Case 4.3: Urllib3 v1.24.2 - Contains high-severity CRLF and header leakage CVEs
+urllib3==1.24.2
+
+
+# ==============================================================================
+# LEVEL 5: CRITICAL RISK (Risk Score: 9.0 – 10.0)
+# ------------------------------------------------------------------------------
+# CHARACTERISTICS:
+# - High-confidence 1-character typosquatting brand-jacking (Levenshtein distance: 1).
+# - OR severely outdated packages with Remote Code Execution (RCE) (CVSS 9.8).
+# - Automatically triggers the "Critical Threat Override Shield" to prevent risk
+#   dilution by benign maintainer metadata.
+#
+# WHAT THE SCANNER EXPECTS:
+# - Risk Engine Output: CRITICAL (Score 9.0 – 9.5)
+# - Typosquatting: 'coloramaa' -> 'colorama', 'djangoo' -> 'django' (97.8% match)
+# - Vulnerability: 'werkzeug==0.14.1' (CVSS 9.8 Critical RCE)
+# - CI/CD Impact: Fails ANY policy gate ('--fail-on HIGH' or '--fail-on CRITICAL').
+# ==============================================================================
+
+# Case 5.1: 'coloramaa' - Critical typosquatting: 1 added character targeting 'colorama'
+coloramaa==0.4.6
+
+# Case 5.2: 'djangoo' - Critical typosquatting: 1 added character targeting 'django'
+djangoo==1.0.0
+
+# Case 5.3: Werkzeug v0.14.1 - Critical CVEs including Remote Code Execution (CVSS 9.8)
+werkzeug==0.14.1

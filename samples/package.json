@@ -1,0 +1,16 @@
+{
+  "name": "enterprise-web-portal",
+  "version": "2.4.0",
+  "description": "Production Node.js web application with supply chain test vectors",
+  "dependencies": {
+    "express": "^4.19.2",
+    "lodsh": "^0.0.1",
+    "lodash": "4.17.15",
+    "react": "18.2.0",
+    "react_dom": "18.2.0",
+    "axios": "^1.6.8"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

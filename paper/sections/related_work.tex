@@ -1,0 +1,60 @@
+\section{Related Work and Background}
+\label{sec:related}
+
+Research in software supply chain security has evolved rapidly in response to sophisticated evasion techniques adopted by threat actors. This section reviews four distinct developmental phases (synthesized in Figure~\ref{fig:evolution}) and establishes a structured comparison against existing state-of-the-art tools.
+
+\begin{figure*}[t]
+\centering
+\resizebox{0.95\textwidth}{!}{\input{figures/evolution.tex}}
+\caption{Evolutionary paradigms in software supply chain defense literature (2022--2026), contrasting early static machine learning, dynamic sandboxing, and LLM reasoning against the deterministic multi-vector design of SCDS.}
+\label{fig:evolution}
+\end{figure*}
+
+\subsection{Evolution of Supply Chain Defense Paradigms}
+
+\subsubsection{The Static Machine Learning Era (2022--2023)}
+Early automated defense systems sought to classify newly published packages using lightweight static feature extraction. The Amalfi framework, introduced by Sejfia and Sch{\"a}fer at ICSE 2022 \cite{sejfia2022amalfi}, applied supervised machine learning (Decision Trees, Naive Bayes, One-Class SVMs) coupled with open-source repository reproducibility checks. Amalfi operated in seconds per package and flagged previously unknown malware on npm. However, static classifiers rely on surface-level syntactic tokens. Threat actors rapidly bypassed these models using simple obfuscation (string concatenation, base64 encoding, dynamic eval) \cite{ladisa2023sok}. Lowering classification thresholds to catch obfuscated malware created overwhelming false-positive rates that induced severe alert fatigue among software engineers.
+
+\subsubsection{The Shift to Dynamic Sandboxing (2023--2024)}
+To overcome the obfuscation limits of static analysis, researchers pivoted to runtime behavioral monitoring. DONAPI \cite{huang2024donapi} executed npm packages within isolated sandboxes, intercepting runtime API call sequences and mapping them to a hierarchical behavioral knowledge base. Similarly, OSCAR \cite{duan2024oscar} combined runtime API hooking with aggressive fuzzing to force dormant logic bombs to execute. 
+
+While dynamic execution defeats encoding and string obfuscation, it introduces an insurmountable operational hurdle for continuous delivery: \textit{execution latency}. Fuzzing or instrumenting an entire dependency graph consumes several minutes to hours per package. Furthermore, sophisticated malware can detect the virtualized sandbox environment and delay execution until after analysis concludes \cite{ladisa2023sok}. Consequently, dynamic sandboxing remains relegated to offline, registry-scale surveillance rather than developer-facing CI/CD gates.
+
+\subsubsection{Semantic Reasoning via LLMs and RAG (2025--2026)}
+Recognizing the limitations of syntactic static analysis and the latency penalties of dynamic sandboxing, recent research has explored transformer models and Large Language Models. IntelGuard (also known as PYGUARD) \cite{guo2026intelguard} proposed a Retrieval-Augmented Generation (RAG) architecture. IntelGuard parses source code into behavioral sequences, queries a vector database containing over 8,000 threat intelligence reports, and prompts an LLM to reason over dual-use APIs (e.g., distinguishing benign telemetry from unauthorized data exfiltration). IntelGuard achieved $99\%$ accuracy and reduced false positives to $0.5\%$. In a parallel effort, Cerebro \cite{zhang2025cerebro} applied fine-tuned BERT models to classify abstracted behavior sequences across both npm and PyPI ecosystems.
+
+Despite their high semantic precision, LLM-based pipelines exhibit severe barriers to adoption in automated pipelines:
+\begin{enumerate}
+    \item \textbf{High Cost and Token Latency:} Each dependency evaluation requires extensive token generation, resulting in multi-second per-package delays and recurring API expenses.
+    \item \textbf{Non-Deterministic Reasoning:} LLM outputs can vary across identical inputs, violating the deterministic reproducibility required by CI/CD build gates.
+    \item \textbf{Data Privacy Risks:} Sending proprietary application manifests to external cloud LLM providers creates compliance concerns for enterprise organizations.
+\end{enumerate}
+
+\subsubsection{Pragmatic Metadata and Heuristic Approaches}
+Concurrently, pragmatic approaches have emerged that inspect repository and package metadata. TypoSmart \cite{davis2025typosmart} utilized high-speed vector similarity searches to detect typosquatting across multiple package registries, reducing false alarms by $70.4\%$ through metadata cross-referencing. However, TypoSmart evaluates only package naming and ignores package contents, known vulnerabilities, and maintainer posture. OpenSSF Scorecard \cite{hegewald2025openssf, openssf2023scorecard} evaluates repository hygiene and branch protection policies via automated GitHub API queries. Nonetheless, Scorecard performs configuration-level analysis and explicitly avoids scanning actual dependency manifests or mapping known CVEs \cite{hegewald2025openssf}.
+
+\begin{table*}[t]
+\centering
+\caption{Comparative analysis of state-of-the-art academic frameworks, industry standards, and SCDS.}
+\label{tab:comparison}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Feature / Dimension} & \textbf{Amalfi} \cite{sejfia2022amalfi} & \textbf{DONAPI} \cite{huang2024donapi} & \textbf{IntelGuard} \cite{guo2026intelguard} & \textbf{TypoSmart} \cite{davis2025typosmart} & \textbf{Scorecard} \cite{hegewald2025openssf} & \textbf{SCDS (Ours)} \\
+\midrule
+Primary Technique & Static ML & Dynamic Sandbox & RAG + LLM & Vector Search & Rules Engine & Deterministic Multi-Vector \\
+Typosquatting Detection & Limited & No & Indirect & \textbf{Yes} & No & \textbf{Yes (Levenshtein + JW)} \\
+Known CVE Mapping & No & No & Indirect & No & No & \textbf{Yes (OSV.dev REST)} \\
+Maintainer Hygiene & Repositories & No & No & Publishing History & \textbf{Yes (Repo Config)} & \textbf{Yes (Registry Signals)} \\
+Latency per Manifest & $< 5$\,s & $> 10$\,min & $15$--$45$\,s & $< 1$\,s & $5$--$20$\,s & \textbf{$< 0.5$\,s ($< 105$\,ms warm)} \\
+Rate-Limit Resilience & N/A & Local Mirror & API Bottleneck & Registry Bound & GitHub Bound & \textbf{SQLite WAL Cache} \\
+Explainable Scoring & Moderate & Low (Traces) & High (Text) & High (Distance) & High (Rules) & \textbf{Deterministic Math} \\
+CI/CD Policy Gate & Batch only & Offline & Non-blocking & Registry Gate & Report only & \textbf{Native Exit Codes (0/1/2)} \\
+Privacy / Offline Capable & Yes & Yes & No (Cloud LLM) & Partial & No (GitHub API) & \textbf{Yes (Fully Air-Gapped)} \\
+\bottomrule
+\end{tabular}
+}
+\end{table*}
+
+\subsection{Positioning of SCDS}
+As summarized in Table~\ref{tab:comparison}, SCDS occupies a unique and necessary position. Rather than creating another slow dynamic sandbox or an opaque neural model, SCDS synthesizes string distance algorithms, vulnerability intelligence, and registry hygiene into a unified, deterministic scoring engine. By grounding threat analysis in transparent mathematics and rate-limit-resistant caching, SCDS delivers the execution speed required for continuous deployment without sacrificing detection rigor.

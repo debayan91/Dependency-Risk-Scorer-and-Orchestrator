@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCDS</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="container">
+    <header class="header">
+      <div class="brand">SCDS</div>
+      <nav class="nav">
+        <button id="tab-manifest-btn" class="nav-btn active" data-tab="manifest-tab">Manifest</button>
+        <button id="tab-single-btn" class="nav-btn" data-tab="single-tab">Package</button>
+      </nav>
+    </header>
+
+    <main>
+      <!-- TAB 1: MANIFEST SCANNER -->
+      <section id="manifest-tab" class="tab-content active">
+        <div class="glass-panel">
+          <div class="panel-header">
+            <div class="file-info">
+              <input type="text" id="manifest-filename-input" value="package.json" spellcheck="false">
+              <input type="file" id="file-upload-input" class="hidden-file-input">
+              <button id="browse-file-btn" class="btn">Upload</button>
+            </div>
+            <div class="presets">
+              <button id="preset-npm-btn" class="btn" type="button">NPM Sample</button>
+              <button id="preset-pypi-btn" class="btn" type="button">PyPI Sample</button>
+              <button id="preset-maven-btn" class="btn" type="button">Maven Sample</button>
+            </div>
+          </div>
+
+          <textarea id="manifest-text-input" class="manifest-input" spellcheck="false" placeholder="Paste manifest here..."></textarea>
+
+          <div class="controls-row">
+            <div class="gate-control">
+              <label for="fail-on-select">Fail on:</label>
+              <select id="fail-on-select" class="select">
+                <option value="">None</option>
+                <option value="CRITICAL">CRITICAL (9.0+)</option>
+                <option value="HIGH" selected>HIGH (7.5+)</option>
+                <option value="MEDIUM">MEDIUM (5.5+)</option>
+              </select>
+            </div>
+            <div class="gate-control">
+              <label for="threshold-input">Threshold:</label>
+              <input type="number" id="threshold-input" class="input" placeholder="0-10" min="0" max="10" step="0.5">
+            </div>
+            <button id="trigger-scan-btn" class="btn btn-primary" type="button">
+              <span class="btn-text">Scan</span>
+              <span class="btn-spinner hidden">...</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="results-container" class="results hidden">
+          <div id="ci-gate-banner" class="gate-banner">
+            <div id="gate-title" class="gate-title">PASSED</div>
+            <div id="gate-reason" class="gate-reason"></div>
+            <button id="export-json-btn" class="btn" type="button">Export JSON</button>
+          </div>
+
+          <div class="metrics-row">
+            <div class="metric"><span class="metric-label">Scanned</span><span id="kpi-total-scanned" class="metric-value">0</span></div>
+            <div class="metric"><span class="metric-label">Critical</span><span id="kpi-critical-count" class="metric-value">0</span></div>
+            <div class="metric"><span class="metric-label">High</span><span id="kpi-high-count" class="metric-value">0</span></div>
+            <div class="metric"><span class="metric-label">Typosquats</span><span id="kpi-typo-count" class="metric-value">0</span></div>
+            <div class="metric"><span class="metric-label">Avg Score</span><span id="kpi-avg-score" class="metric-value">0.0</span></div>
+          </div>
+
+          <div class="glass-panel">
+            <div class="filter-row">
+              <div class="filters">
+                <button class="filter-btn active" data-filter="ALL">All (<span id="count-all">0</span>)</button>
+                <button class="filter-btn" data-filter="CRITICAL">Critical (<span id="count-critical">0</span>)</button>
+                <button class="filter-btn" data-filter="HIGH">High (<span id="count-high">0</span>)</button>
+                <button class="filter-btn" data-filter="MEDIUM">Medium (<span id="count-medium">0</span>)</button>
+                <button class="filter-btn" data-filter="LOW">Low (<span id="count-low">0</span>)</button>
+                <button class="filter-btn" data-filter="SAFE">Safe (<span id="count-safe">0</span>)</button>
+              </div>
+              <input type="text" id="table-search-input" class="input search-input" placeholder="Search...">
+            </div>
+
+            <table id="dependencies-table" class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 20px;"></th>
+                  <th>Package</th>
+                  <th>Version</th>
+                  <th>Ecosystem</th>
+                  <th>Score</th>
+                  <th>Level</th>
+                  <th>Findings</th>
+                </tr>
+              </thead>
+              <tbody id="dependencies-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: SINGLE PACKAGE AUDIT -->
+      <section id="single-tab" class="tab-content">
+        <div class="glass-panel">
+          <div class="single-controls">
+            <input type="text" id="single-pkg-name" class="input" placeholder="Package name">
+            <input type="text" id="single-pkg-version" class="input" placeholder="Version (optional)">
+            <select id="single-pkg-ecosystem" class="select">
+              <option value="PyPI">PyPI</option>
+              <option value="npm">npm</option>
+              <option value="Maven">Maven</option>
+            </select>
+            <button id="single-pkg-submit-btn" class="btn btn-primary" type="button">Audit</button>
+          </div>
+          <div id="single-result-container" class="single-result hidden"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

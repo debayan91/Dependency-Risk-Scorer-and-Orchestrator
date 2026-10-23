@@ -1,0 +1,8 @@
+# Production Backend Services
+requests==2.20.0
+reqeusts==0.0.1
+coloramaa==0.4.6
+urllib3==1.24.2
+flask==3.0.3
+pytest>=8.0.0
+pydantic
